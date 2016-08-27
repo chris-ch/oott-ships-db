@@ -73,6 +73,7 @@ def rebalance_cache_tree(path, nodes_path=None):
         logging.info('rebalancing required, creating nodes: %s and %s', os.path.abspath(new_path_1), os.path.abspath(new_path_2))
         _rebalancing.acquire()
         _rebalancing.wait()
+        logging.info('lock acquired: rebalancing started')
         if not os.path.exists(new_path_1):
             os.makedirs(new_path_1)
 
@@ -177,6 +178,30 @@ def _get_from_cache(key):
     return content
 
 
+def _remove_from_cache(key):
+    _rebalancing.acquire()
+    try:
+        logging.debug('removing from cache: %s', key)
+        filename = get_cache_filename(key)
+        index_name = os.path.sep.join([_CACHE_FILE_PATH, 'index'])
+        os.remove(filename)
+        filename_digest = filename.split(os.path.sep)[-1]
+
+        with open(index_name, 'r') as index_file:
+            lines = index_file.readlines()
+
+        lines = [line for line in lines if line.split(' ')[1] != filename_digest + ':']
+
+        with open(index_name, 'w') as index_file:
+            index_file.writelines(lines)
+
+        logging.info('removed key %s from cache' % filename_digest)
+
+    finally:
+        _rebalancing.notify_all()
+        _rebalancing.release()
+
+
 def open_url(url):
     logging.debug('opening url: %s', url)
     if is_cache_used():
@@ -191,3 +216,11 @@ def open_url(url):
         content = requests.get(url).text
 
     return content
+
+
+def invalidate_url(url):
+    _remove_from_cache(url)
+
+
+def rebalance_cache():
+    rebalance_cache_tree(_CACHE_FILE_PATH)
