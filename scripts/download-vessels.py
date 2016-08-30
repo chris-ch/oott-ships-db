@@ -1,6 +1,7 @@
 import argparse
 import csv
 import logging
+import os
 from string import Template
 
 from bs4 import BeautifulSoup
@@ -69,7 +70,7 @@ def load_page(page_current, page_max=None):
     return page_content, completed
 
 
-def load_pages(page_max=None, page_start=1):
+def load_pages(output_dir, page_max=None, page_start=1):
     page_counter = page_start
     results, completed = load_page(page_counter, page_max=page_max)
     while not completed:
@@ -77,14 +78,18 @@ def load_pages(page_max=None, page_start=1):
         page_results, completed = load_page(page_counter, page_max=page_max)
         results += page_results
 
-    with open('ship-db.csv', 'w') as ship_db:
+    with open(os.path.sep.join([output_dir, 'ship-db.csv']), 'w') as ship_db:
         csv_writer = csv.DictWriter(ship_db, sorted(results[0].keys()))
         csv_writer.writeheader()
         csv_writer.writerows(results)
 
 
-def main():
-    load_pages(page_max=None, page_start=1)
+def main(args):
+    if not os.path.exists(args.output_dir):
+        logging.info('creating output directory "%s"', os.path.abspath(args.output_dir))
+        os.makedirs(args.output_dir)
+
+    load_pages(args.output_dir, page_max=None, page_start=1)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(name)s:%(levelname)s:%(message)s')
@@ -98,7 +103,10 @@ if __name__ == '__main__':
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter
                                      )
 
-    set_cache_http('output/urlcaching')
-
+    parser.add_argument('--output-dir', type=str, help='location of output directory', default='.')
+    parser.add_argument('output_file', type=str, nargs='?', help='name of the output CSV file', default='vessels.csv')
     args = parser.parse_args()
-    main()
+
+    set_cache_http(os.path.sep.join([args.output_dir, 'urlcaching']))
+
+    main(args)
