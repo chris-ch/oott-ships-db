@@ -1,6 +1,7 @@
 import logging
 import random
 
+from taskpool import TaskPool
 from urlcaching import set_cache_path, read_cached, delete_cache
 
 
@@ -12,19 +13,22 @@ def open_test_random(key):
     content = read_cached(inner_open_test_random, key)
     return content
 
-
 if __name__ == '__main__':
-
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(name)s:%(levelname)s:%(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(name)s:%(levelname)s:%(message)s')
     logging.getLogger('requests').setLevel(logging.WARNING)
     file_handler = logging.FileHandler('download-vessels-details.log', mode='w')
     formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:%(message)s')
     file_handler.setFormatter(formatter)
     logging.getLogger().addHandler(file_handler)
 
-    set_cache_path('output/tests', max_node_files=4, rebalancing_limit=10)
+    set_cache_path('output/tests', max_node_files=100, rebalancing_limit=1000)
     delete_cache()
-    for count in range(1000):
-        content = open_test_random(count)
 
+    tasks = TaskPool()
+
+    for count in range(10000):
+        tasks.add_task(open_test_random, count)
+
+    results = tasks.execute()
+    logging.info('results: %s', results)
     delete_cache()

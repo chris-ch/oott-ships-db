@@ -121,7 +121,7 @@ def find_node(digest, path=None):
                 break
 
         if not target_directory:
-            raise Exception('Inconsistent cache tree')
+            raise Exception('Inconsistent cache tree: expected directory "%s" not found', target_directory)
 
         return find_node(digest, path=os.path.sep.join([path, target_directory]))
 
@@ -247,7 +247,7 @@ def delete_cache():
             node_path = os.path.sep.join([_CACHE_FILE_PATH, node])
             rmtree(node_path, ignore_errors=True)
 
-        os.remove(_index_name())
+        rmtree(_index_name(), ignore_errors=True)
 
 
 def open_url(url):
