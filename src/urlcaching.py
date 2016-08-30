@@ -47,7 +47,9 @@ def _get_directories_under(path):
 
 
 def _get_files_under(path):
-    return (node for node in os.listdir(path) if os.path.isfile(os.path.join(path, node)))
+    return (node for node in os.listdir(path)
+            if os.path.isfile(os.path.join(path, node)) and node != 'index'
+            )
 
 
 def _generator_count(a_generator):
@@ -93,12 +95,14 @@ def rebalance_cache_tree(path, nodes_path=None):
             for filename in _get_files_under(current_path):
                 file_path = os.path.sep.join([current_path, filename])
                 if file_path <= new_path_1:
-                    logging.info('moving %s to %s', filename, new_path_1)
+                    logging.debug('moving %s to %s', filename, new_path_1)
                     os.rename(file_path, os.path.sep.join([new_path_1, filename]))
 
                 else:
-                    logging.info('moving %s to %s', filename, new_path_2)
+                    logging.debug('moving %s to %s', filename, new_path_2)
                     os.rename(file_path, os.path.sep.join([new_path_2, filename]))
+
+        logging.info('lock released: rebalancing completed')
 
     for directory in _get_directories_under(current_path):
         rebalance_cache_tree(path, nodes_path + [directory])
@@ -247,7 +251,8 @@ def delete_cache():
             node_path = os.path.sep.join([_CACHE_FILE_PATH, node])
             rmtree(node_path, ignore_errors=True)
 
-        rmtree(_index_name(), ignore_errors=True)
+        if os.path.exists(_index_name()):
+            os.remove(_index_name())
 
 
 def open_url(url):
