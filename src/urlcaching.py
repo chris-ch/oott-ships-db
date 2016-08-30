@@ -8,6 +8,8 @@ from datetime import datetime
 import requests
 import hashlib
 
+from shutil import rmtree
+
 _CACHE_FILE_PATH = None
 _MAX_NODE_FILES = 0x400
 _REBALANCING_LIMIT = 0x1000
@@ -80,26 +82,23 @@ def rebalance_cache_tree(path, nodes_path=None):
     if rebalancing_required:
         new_path_1, new_path_2 = _divide_node(path, nodes_path)
         logging.info('rebalancing required, creating nodes: %s and %s', os.path.abspath(new_path_1), os.path.abspath(new_path_2))
-        _rebalancing.acquire()
-        _rebalancing.wait()
-        logging.info('lock acquired: rebalancing started')
-        if not os.path.exists(new_path_1):
-            os.makedirs(new_path_1)
+        with _rebalancing:
+            logging.info('lock acquired: rebalancing started')
+            if not os.path.exists(new_path_1):
+                os.makedirs(new_path_1)
 
-        if not os.path.exists(new_path_2):
-            os.makedirs(new_path_2)
+            if not os.path.exists(new_path_2):
+                os.makedirs(new_path_2)
 
-        for filename in _get_files_under(current_path):
-            file_path = os.path.sep.join([current_path, filename])
-            if file_path <= new_path_1:
-                logging.info('moving %s to %s', filename, new_path_1)
-                os.rename(file_path, os.path.sep.join([new_path_1, filename]))
+            for filename in _get_files_under(current_path):
+                file_path = os.path.sep.join([current_path, filename])
+                if file_path <= new_path_1:
+                    logging.info('moving %s to %s', filename, new_path_1)
+                    os.rename(file_path, os.path.sep.join([new_path_1, filename]))
 
-            else:
-                logging.info('moving %s to %s', filename, new_path_2)
-                os.rename(file_path, os.path.sep.join([new_path_2, filename]))
-
-        _rebalancing.release()
+                else:
+                    logging.info('moving %s to %s', filename, new_path_2)
+                    os.rename(file_path, os.path.sep.join([new_path_2, filename]))
 
     for directory in _get_directories_under(current_path):
         rebalance_cache_tree(path, nodes_path + [directory])
@@ -229,11 +228,19 @@ def read_cached(read_func, key):
 
 
 def invalidate_key(key):
-    _remove_from_cache(key)
+    if is_cache_used():
+        _remove_from_cache(key)
 
 
 def rebalance_cache():
-    rebalance_cache_tree(_CACHE_FILE_PATH)
+    if is_cache_used():
+        rebalance_cache_tree(_CACHE_FILE_PATH)
+
+
+def delete_cache():
+    if is_cache_used():
+        for node in os.listdir(_CACHE_FILE_PATH):
+            rmtree(node, ignore_errors=True)
 
 
 def open_url(url):
