@@ -21,10 +21,10 @@ if __name__ == '__main__':
     file_handler.setFormatter(formatter)
     logging.getLogger().addHandler(file_handler)
 
-    set_cache_path('output/tests', max_node_files=100, rebalancing_limit=1000)
+    set_cache_path('output/tests', max_node_files=400, rebalancing_limit=1000)
     delete_cache()
 
-    tasks = TaskPool()
+    tasks = TaskPool(30)
 
     for count in range(10000):
         tasks.add_task(open_test_random, count)

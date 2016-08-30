@@ -42,7 +42,7 @@ class TaskPool(object):
 
         :return:
         """
-        logging.debug('processing %d tasks', len(self._tasks_args))
+        logging.info('processing %d tasks on a pool size of %d', len(self._tasks_args), self._pool_size)
         if self._pool_size == 1:
             results = list()
             for task_args in self._tasks_args:
