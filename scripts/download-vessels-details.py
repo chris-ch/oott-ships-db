@@ -6,7 +6,7 @@ from string import Template
 
 from bs4 import BeautifulSoup
 
-from urlcaching import set_cache_http, open_url, invalidate_url
+from urlcaching import set_cache_path, open_url, invalidate_key
 
 _VESSEL_TYPES = {
     'Cargo ships': '4',
@@ -101,6 +101,6 @@ if __name__ == '__main__':
     parser.add_argument('output_file', type=str, nargs='?', help='name of the output CSV file', default='vessels-details.csv')
     args = parser.parse_args()
 
-    set_cache_http(os.path.sep.join([args.output_dir, 'urlcaching-details']))
+    set_cache_path(os.path.sep.join([args.output_dir, 'urlcaching-details']))
 
     main(args)

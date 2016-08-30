@@ -6,7 +6,7 @@ from string import Template
 
 from bs4 import BeautifulSoup
 
-from urlcaching import set_cache_http, open_url, invalidate_url
+from urlcaching import set_cache_path, open_url, invalidate_key
 
 _VESSEL_TYPES = {
     'Cargo ships': '4',
@@ -64,7 +64,7 @@ def load_page(page_current, page_max=None):
 
     except Exception:
         logging.error('failed to load page %s', page_current, exc_info=True)
-        invalidate_url(url)
+        invalidate_key(url)
         raise
 
     return page_content, completed
@@ -107,6 +107,6 @@ if __name__ == '__main__':
     parser.add_argument('output_file', type=str, nargs='?', help='name of the output CSV file', default='vessels.csv')
     args = parser.parse_args()
 
-    set_cache_http(os.path.sep.join([args.output_dir, 'urlcaching']))
+    set_cache_path(os.path.sep.join([args.output_dir, 'urlcaching']))
 
     main(args)

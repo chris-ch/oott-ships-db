@@ -17,8 +17,17 @@ _HEADERS_CHROME = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1
 _rebalancing = threading.Condition()
 
 
-def set_cache_http(cache_file_path):
+def set_cache_path(cache_file_path, max_node_files=None, rebalancing_limit=None):
     global _CACHE_FILE_PATH
+    global _MAX_NODE_FILES
+    global _REBALANCING_LIMIT
+
+    if max_node_files is not None:
+        _MAX_NODE_FILES = max_node_files
+
+    if rebalancing_limit is not None:
+        _REBALANCING_LIMIT = rebalancing_limit
+
     cache_file_path_full = os.path.abspath(cache_file_path)
     _CACHE_FILE_PATH = cache_file_path_full
     if not os.path.exists(_CACHE_FILE_PATH):
@@ -119,6 +128,7 @@ def find_node(digest, path=None):
 
 
 def get_cache_filename(key):
+    key = str(key)
     hash_md5 = hashlib.md5()
     hash_md5.update(key.encode('utf-8'))
     digest = hash_md5.hexdigest()
@@ -202,25 +212,34 @@ def _remove_from_cache(key):
         _rebalancing.release()
 
 
-def open_url(url):
-    logging.debug('opening url: %s', url)
+def read_cached(read_func, key):
+    logging.debug('reading for key: %s', key)
     if is_cache_used():
-        if not is_cached(url):
-            content = requests.get(url, headers=_HEADERS_CHROME).text
-            _add_to_cache(url, content)
+        if not is_cached(key):
+            content = read_func(key)
+            _add_to_cache(key, content)
 
-        content = _get_from_cache(url)
+        content = _get_from_cache(key)
 
     else:
         # straight access
-        content = requests.get(url).text
+        content = read_func(key)
 
     return content
 
 
-def invalidate_url(url):
-    _remove_from_cache(url)
+def invalidate_key(key):
+    _remove_from_cache(key)
 
 
 def rebalance_cache():
     rebalance_cache_tree(_CACHE_FILE_PATH)
+
+
+def open_url(url):
+
+    def inner_open_url(request_url):
+        return requests.get(request_url, headers=_HEADERS_CHROME).text
+
+    content = read_cached(inner_open_url, url)
+    return content
