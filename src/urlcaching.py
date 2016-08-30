@@ -150,12 +150,16 @@ def file_size(filename):
     return count + 1
 
 
+def _index_name():
+    return os.path.sep.join([_CACHE_FILE_PATH, 'index'])
+
+
 def _add_to_cache(key, value):
     _rebalancing.acquire()
     try:
         logging.debug('adding to cache: %s', key)
         filename = get_cache_filename(key)
-        index_name = os.path.sep.join([_CACHE_FILE_PATH, 'index'])
+        index_name = _index_name()
         today = datetime.today().strftime('%Y%m%d')
         with open(filename, 'w') as cache_content:
             cache_content.write(value)
@@ -192,7 +196,7 @@ def _remove_from_cache(key):
     try:
         logging.debug('removing from cache: %s', key)
         filename = get_cache_filename(key)
-        index_name = os.path.sep.join([_CACHE_FILE_PATH, 'index'])
+        index_name = _index_name()
         os.remove(filename)
         filename_digest = filename.split(os.path.sep)[-1]
 
@@ -240,7 +244,10 @@ def rebalance_cache():
 def delete_cache():
     if is_cache_used():
         for node in os.listdir(_CACHE_FILE_PATH):
-            rmtree(node, ignore_errors=True)
+            node_path = os.path.sep.join([_CACHE_FILE_PATH, node])
+            rmtree(node_path, ignore_errors=True)
+
+        os.remove(_index_name())
 
 
 def open_url(url):
