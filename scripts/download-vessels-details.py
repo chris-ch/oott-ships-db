@@ -6,6 +6,7 @@ from string import Template
 
 from bs4 import BeautifulSoup
 
+from taskpool import TaskPool
 from urlcaching import set_cache_path, open_url, invalidate_key
 
 _VESSEL_TYPES = {
@@ -17,7 +18,7 @@ _URL_BASE = 'https://www.vesselfinder.com'
 _URL_LIST_TEMPLATE = Template(_URL_BASE + '/vessels?t=$vessel_type&page=$page_count')
 
 
-def load_details(url):
+def load_details(url, load_id):
     logging.info('processing url: %s', url)
     html_text = open_url(url)
     html = BeautifulSoup(html_text, 'html.parser')
@@ -35,8 +36,11 @@ def load_details(url):
             column_name_tag = param.find('span', {'class': 'name'})
             column_value_tag = param.find('span', {'class': 'value'})
             if column_name_tag and column_value_tag:
-                column_name = column_name_tag.text
+                column_name = column_name_tag.text.replace(':', '')
                 column_value = column_value_tag.text.strip()
+                if column_value.upper() in ('PREMIUM USERS ONLY', 'N/A'):
+                    column_value = ''
+
                 params[column_name] = column_value
 
     master_data = html.find('section', {'id': 'master-data'})
@@ -55,11 +59,14 @@ def load_details(url):
         column_name_tag = param.find(find_param('name'))
         column_value_tag = param.find(find_param('value'))
         if column_name_tag and column_value_tag:
-            column_name = column_name_tag.text
+            column_name = column_name_tag.text.replace(':', '')
             column_value = column_value_tag.text.strip()
+            if column_value.upper() in ('PREMIUM USERS ONLY', 'N/A'):
+                column_value = ''
+
             params[column_name] = column_value
 
-    return params
+    return load_id, params
 
 
 def main(args):
@@ -67,9 +74,12 @@ def main(args):
         logging.info('creating output directory "%s"', os.path.abspath(args.output_dir))
         os.makedirs(args.output_dir)
 
+    tasks = TaskPool(20)
+    enhanced_vessels = list()
     with open(args.input_file) as input_file:
         vessels = csv.DictReader(input_file)
         for count, vessel in enumerate(vessels):
+            enhanced_vessels.append(vessel)
             if args.head is not None:
                 if count >= args.head:
                     break
@@ -77,13 +87,23 @@ def main(args):
             ship_details_url_path = vessel['ship_details_url_path']
             if ship_details_url_path.startswith('/vessels'):
                 url = _URL_BASE + ship_details_url_path
-                details = load_details(url)
-                print(details)
+                tasks.add_task(load_details, url, count)
+
+        details = tasks.execute()
+
+        for load_id, vessel_data in details:
+            for param_name in vessel_data:
+                enhanced_vessels[load_id][param_name] = vessel_data[param_name]
+
+    with open(os.path.sep.join([args.output_dir, 'ship-db-details.csv']), 'w') as ship_db:
+        csv_writer = csv.DictWriter(ship_db, sorted(enhanced_vessels[0].keys()))
+        csv_writer.writeheader()
+        csv_writer.writerows(enhanced_vessels)
 
     logging.info('completed tasks')
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(name)s:%(levelname)s:%(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(name)s:%(levelname)s:%(message)s')
     logging.getLogger('requests').setLevel(logging.WARNING)
     file_handler = logging.FileHandler('download-vessels-details.log', mode='w')
     formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:%(message)s')

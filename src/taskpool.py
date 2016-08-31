@@ -19,7 +19,9 @@ class TaskPool(object):
             result = wrapped_task(*wrapped_args, **wrapped_kwargs)
 
         except Exception as err:
-            logging.error('task %d failed: %s', wrapped_task_id, err, exc_info=True)
+            logging.error('task %d (%s, %s, %s) failed: %s',
+                          wrapped_task_id, wrapped_task, wrapped_args, wrapped_kwargs,
+                          err, exc_info=True)
             raise
 
         return result
