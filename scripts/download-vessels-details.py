@@ -24,6 +24,10 @@ def load_details(url, load_id):
     html = BeautifulSoup(html_text, 'html.parser')
     ais_data = html.find('div', {'id': 'ais-data'})
     params = dict()
+    if ais_data is None:
+        logging.warning('invalid format for page: "%s"', url)
+        return load_id, params
+
     for param in ais_data.find_all('div', {'class': 'row param'}):
         column_name_tag = param.find('span', {'itemprop': 'name'})
         column_value_tag = param.find('span', {'itemprop': 'value'})
