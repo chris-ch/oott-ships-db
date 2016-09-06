@@ -42,4 +42,6 @@ if __name__ == '__main__':
         numeric_columns = ['Course','Current draught', 'Draught', 'Width', 'Length', 'Deadweight',
                            'Gross Tonnage', 'Net Tonnage', 'Speed']
         vessels[numeric_columns] = vessels[numeric_columns].apply(pandas.to_numeric)
-        print(vessels.head(20))
+        vessels = vessels[vessels['Width'] < vessels['Width'].mean() + 6. * vessels['Width'].std()]
+        vessels = vessels[vessels['Length'] < vessels['Length'].mean() + 6. * vessels['Width'].std()]
+        vessels.to_pickle('output/vessels_df.pkl')
