@@ -70,6 +70,12 @@ def load_details(url, load_id):
 
             params[column_name] = column_value
 
+    last_report_ts = None
+    last_report_tag = html.find('time', {'id': 'last_report_ts'})
+    if last_report_tag is not None:
+        last_report_ts = last_report_tag.contents[0]
+
+    params['last_report_ts'] = last_report_ts
     return load_id, params
 
 
@@ -78,7 +84,7 @@ def main(args):
         logging.info('creating output directory "%s"', os.path.abspath(args.output_dir))
         os.makedirs(args.output_dir)
 
-    tasks = TaskPool(20)
+    tasks = TaskPool(args.pool_size)
     enhanced_vessels = list()
     with open(args.input_file) as input_file:
         vessels = csv.DictReader(input_file)
@@ -121,6 +127,7 @@ if __name__ == '__main__':
     parser.add_argument('--input-file', type=str, help='input list of vessels (CSV file)', default='vessels.csv')
     parser.add_argument('--output-dir', type=str, help='location of output directory', default='.')
     parser.add_argument('--head', type=int, help='processes only the indicated amount of lines from input file')
+    parser.add_argument('--pool-size', type=int, help='number of parallel tasks', default=20)
 
     parser.add_argument('output_file', type=str, nargs='?', help='name of the output CSV file', default='vessels-details.csv')
     args = parser.parse_args()
