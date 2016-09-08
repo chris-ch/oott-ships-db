@@ -22,7 +22,15 @@ class TaskPool(object):
             logging.error('task %d (%s, %s, %s) failed: %s',
                           wrapped_task_id, wrapped_task, wrapped_args, wrapped_kwargs,
                           err, exc_info=True)
-            raise
+            logging.warning('retrying failed task %d', wrapped_task_id)
+            try:
+                result = wrapped_task(*wrapped_args, **wrapped_kwargs)
+
+            except Exception as err_2:
+                logging.error('task %d (%s, %s, %s) failed twice: %s',
+                          wrapped_task_id, wrapped_task, wrapped_args, wrapped_kwargs,
+                          err, exc_info=True)
+                raise
 
         return result
 
