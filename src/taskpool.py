@@ -29,7 +29,7 @@ class TaskPool(object):
             except Exception as err_2:
                 logging.error('task %d (%s, %s, %s) failed twice: %s',
                           wrapped_task_id, wrapped_task, wrapped_args, wrapped_kwargs,
-                          err, exc_info=True)
+                          err_2, exc_info=True)
                 raise
 
         return result
