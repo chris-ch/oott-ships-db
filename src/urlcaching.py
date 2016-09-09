@@ -165,7 +165,7 @@ def _add_to_cache(key, value):
         filename = get_cache_filename(key)
         index_name = _index_name()
         today = datetime.today().strftime('%Y%m%d')
-        with open(filename, 'w') as cache_content:
+        with open(filename, 'w', encoding='utf-8') as cache_content:
             cache_content.write(value)
 
         with open(index_name, 'a') as index_file:
@@ -185,7 +185,7 @@ def _get_from_cache(key):
     _rebalancing.acquire()
     try:
         logging.debug('reading from cache: %s', key)
-        with open(get_cache_filename(key), 'r') as cache_content:
+        with open(get_cache_filename(key), 'r', encoding='utf-8') as cache_content:
             content = cache_content.read()
 
     finally:
