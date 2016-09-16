@@ -254,11 +254,18 @@ def delete_cache():
         if os.path.exists(_index_name()):
             os.remove(_index_name())
 
+_requests_session = None
+
 
 def open_url(url):
+    global _requests_session
+
+    if _requests_session is None:
+        _requests_session = requests.Session()
 
     def inner_open_url(request_url):
-        return requests.get(request_url, headers=_HEADERS_CHROME).text
+        logging.debug('session cookies: %s', _requests_session.cookies)
+        return _requests_session.get(request_url, headers=_HEADERS_CHROME).text
 
     content = read_cached(inner_open_url, url)
     return content
