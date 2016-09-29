@@ -1,3 +1,22 @@
+"""
+Helper for webscraping.
+
+Locally caches downloaded pages.
+As opposed to requests_cache it should be able to handle multithreading.
+
+The line below enables caching and sets the cached files path:
+    >>> set_cache_path('example-cache')
+    >>> first_call_response = open_url('https://www.google.ch/search?q=what+time+is+it')
+
+Subsequent calls for the same URL returns the cached data:
+    >>> import time
+    >>> time.sleep(60)
+    >>> second_call_response = open_url('https://www.google.ch/search?q=what+time+is+it')
+    >>> first_call_response == second_call_response
+    True
+
+
+"""
 import logging
 import os
 
@@ -257,7 +276,7 @@ def delete_cache():
 _requests_session = None
 
 
-def open_url(url):
+def open_url(url, rejection_marker=None):
     global _requests_session
 
     if _requests_session is None:
@@ -265,7 +284,11 @@ def open_url(url):
 
     def inner_open_url(request_url):
         logging.debug('session cookies: %s', _requests_session.cookies)
-        return _requests_session.get(request_url, headers=_HEADERS_CHROME).text
+        response = _requests_session.get(request_url, headers=_HEADERS_CHROME).text
+        if rejection_marker is not None and rejection_marker in response:
+            raise RuntimeError('rejected, failed to load url %s', request_url)
+
+        return response
 
     content = read_cached(inner_open_url, url)
     return content
