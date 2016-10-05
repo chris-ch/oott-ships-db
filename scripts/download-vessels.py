@@ -63,7 +63,7 @@ def load_page(page_current, page_max=None):
         completed = page_current >= int(page_last) or page_current >= (page_max, page_current + 1)[page_max is None]
 
     except Exception:
-        logging.error('failed to load page %s', page_current, exc_info=True)
+        logging.exception('failed to load page %s', page_current)
         invalidate_key(url)
         raise
 
