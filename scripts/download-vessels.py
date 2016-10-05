@@ -6,7 +6,7 @@ from string import Template
 
 from bs4 import BeautifulSoup
 
-from urlcaching import set_cache_path, open_url, invalidate_key
+from webscrapetools.urlcaching import set_cache_path, open_url, invalidate_key
 
 _VESSEL_TYPES = {
     'Cargo ships': '4',

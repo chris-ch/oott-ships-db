@@ -6,8 +6,8 @@ from string import Template
 
 from bs4 import BeautifulSoup
 
-from taskpool import TaskPool
-from urlcaching import set_cache_path, open_url, invalidate_key
+from webscrapetools.taskpool import TaskPool
+from webscrapetools.urlcaching import set_cache_path, open_url
 
 _VESSEL_TYPES = {
     'Cargo ships': '4',

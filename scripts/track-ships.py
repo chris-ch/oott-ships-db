@@ -1,12 +1,9 @@
 import argparse
-import csv
 import logging
 import os
 from string import Template
 
-from bs4 import BeautifulSoup
-
-from urlcaching import open_url
+from webscrapetools.urlcaching import open_url
 
 _VESSEL_TYPES = {
     'Cargo ships': '4',
