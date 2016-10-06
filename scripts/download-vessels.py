@@ -21,7 +21,7 @@ def load_page(page_current, page_max=None):
     assert page_current > 0
     vessel_type = 'Tanker'
     url = _URL_LIST_TEMPLATE.substitute({'vessel_type': _VESSEL_TYPES[vessel_type], 'page_count': page_current})
-    html_text = open_url(url)
+    html_text = open_url(url, throttle=1)
     try:
         html = BeautifulSoup(html_text, 'html.parser')
         ship_rows = html.find_all('div', {'class': 'ship-row-details'})
@@ -78,7 +78,7 @@ def load_pages(output_dir, page_max=None, page_start=1):
         page_results, completed = load_page(page_counter, page_max=page_max)
         results += page_results
 
-    with open(os.path.sep.join([output_dir, 'ship-db.csv']), 'w') as ship_db:
+    with open(os.path.sep.join([output_dir, 'ship-db.csv']), 'w', encoding='utf-8') as ship_db:
         csv_writer = csv.DictWriter(ship_db, sorted(results[0].keys()))
         csv_writer.writeheader()
         csv_writer.writerows(results)
@@ -109,4 +109,9 @@ if __name__ == '__main__':
 
     set_cache_path(os.path.sep.join([args.output_dir, 'urlcaching']))
 
-    main(args)
+    try:
+        main(args)
+
+    except:
+        logging.exception('uncaught error')
+

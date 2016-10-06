@@ -20,7 +20,7 @@ _URL_LIST_TEMPLATE = Template(_URL_BASE + '/vessels?t=$vessel_type&page=$page_co
 
 def load_details(url, load_id):
     logging.info('processing url: %s', url)
-    html_text = open_url(url)
+    html_text = open_url(url, throttle=1)
     html = BeautifulSoup(html_text, 'html.parser')
     ais_data = html.find('div', {'id': 'ais-data'})
     params = dict()
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     parser.add_argument('--input-file', type=str, help='input list of vessels (CSV file)', default='vessels.csv')
     parser.add_argument('--output-dir', type=str, help='location of output directory', default='.')
     parser.add_argument('--head', type=int, help='processes only the indicated amount of lines from input file')
-    parser.add_argument('--pool-size', type=int, help='number of parallel tasks', default=20)
+    parser.add_argument('--pool-size', type=int, help='number of parallel tasks', default=1)
 
     parser.add_argument('output_file', type=str, nargs='?', help='name of the output CSV file', default='vessels-details.csv')
     args = parser.parse_args()
