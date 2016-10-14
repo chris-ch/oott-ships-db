@@ -82,7 +82,7 @@ def load_details(url, load_id):
 
 
 def inspect(input_filename):
-    with open(input_filename, 'r') as csv_file:
+    with open(input_filename, 'r', encoding='utf-8') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         rows = list()
         for row in csv_reader:
