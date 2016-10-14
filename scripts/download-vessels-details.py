@@ -140,7 +140,7 @@ def main():
     rows = inspect(input_filename)
     vessels_oil, vessels_lng = build_vessels_df(rows)
 
-    for count, vessel_row_data in enumerate(vessels_lng.iterrows()):
+    for count, vessel_row_data in enumerate(vessels_oil.iterrows()):
         vessel = vessel_row_data[1].to_dict()
         enhanced_vessels.append(vessel)
         if args.head is not None:
