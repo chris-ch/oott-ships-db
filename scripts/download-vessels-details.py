@@ -2,8 +2,10 @@ import argparse
 import csv
 import logging
 import os
+import re
 from string import Template
 
+import pandas
 from bs4 import BeautifulSoup
 
 from webscrapetools.taskpool import TaskPool
@@ -79,31 +81,82 @@ def load_details(url, load_id):
     return load_id, params
 
 
-def main(args):
+def inspect(input_filename):
+    with open(input_filename, 'r') as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+        rows = list()
+        for row in csv_reader:
+            fields = {field: row[field].strip() for field in row}
+            if fields['IMO'] == '':
+                continue
+
+            gross_tonnage = None
+            if fields['GT'].endswith(' t'):
+                if len(fields['GT'][:-2]) > 0:
+                    gross_tonnage = int(fields['GT'][:-2])
+
+            row['GT'] = gross_tonnage
+            length_width = re.match(r'([0-9]+)\sx\s([0-9]+)', fields['Size'])
+            row['Length'], row['Width'] = None, None
+            if length_width and len(length_width.groups()) == 2:
+                row['Length'], row['Width'] = map(int, length_width.group(1, 2))
+
+            del row['Size']
+            rows.append(row)
+
+        return rows
+
+
+def build_vessels_df(rows):
+    vessels = pandas.DataFrame(rows)
+    vessel_selection = (vessels['Length'] < 400) & (vessels['GT'] > 80000)
+    vessels_oil = vessels[vessel_selection & vessels['Ship type'].str.contains('Oil')]
+    vessels_lng = vessels[vessel_selection & vessels['Ship type'].str.contains('LNG')]
+    return vessels_oil, vessels_lng
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Importing vessels details from online DB',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter
+                                     )
+
+    parser.add_argument('--input-dir', type=str, help='location of input directory', default='.')
+    parser.add_argument('--input-file', type=str, help='name of the input CSV file', default='ship-db.csv')
+    parser.add_argument('--output-dir', type=str, help='location of output directory', default='.')
+    parser.add_argument('--head', type=int, help='processes only the indicated amount of lines from input file')
+    parser.add_argument('--pool-size', type=int, help='number of parallel tasks', default=1)
+
+    parser.add_argument('output_file', type=str, nargs='?', help='name of the output CSV file', default='vessels-details.csv')
+    args = parser.parse_args()
+
+    set_cache_path(os.path.sep.join([args.output_dir, 'urlcaching-details']))
     if not os.path.exists(args.output_dir):
         logging.info('creating output directory "%s"', os.path.abspath(args.output_dir))
         os.makedirs(args.output_dir)
 
     tasks = TaskPool(args.pool_size)
     enhanced_vessels = list()
-    with open(args.input_file) as input_file:
-        vessels = csv.DictReader(input_file)
-        for count, vessel in enumerate(vessels):
-            enhanced_vessels.append(vessel)
-            if args.head is not None:
-                if count >= args.head:
-                    break
+    input_filename = os.sep.join((args.input_dir, args.input_file))
+    rows = inspect(input_filename)
+    vessels_oil, vessels_lng = build_vessels_df(rows)
 
-            ship_details_url_path = vessel['ship_details_url_path']
-            if ship_details_url_path.startswith('/vessels'):
-                url = _URL_BASE + ship_details_url_path
-                tasks.add_task(load_details, url, count)
+    for count, vessel_row_data in enumerate(vessels_lng.iterrows()):
+        vessel = vessel_row_data[1].to_dict()
+        enhanced_vessels.append(vessel)
+        if args.head is not None:
+            if count >= args.head:
+                break
 
-        details = tasks.execute()
+        ship_details_url_path = vessel['ship_details_url_path']
+        if ship_details_url_path.startswith('/vessels'):
+            url = _URL_BASE + ship_details_url_path
+            tasks.add_task(load_details, url, count)
 
-        for load_id, vessel_data in details:
-            for param_name in vessel_data:
-                enhanced_vessels[load_id][param_name] = vessel_data[param_name]
+    details = tasks.execute()
+
+    for load_id, vessel_data in details:
+        for param_name in vessel_data:
+            enhanced_vessels[load_id][param_name] = vessel_data[param_name]
 
     with open(os.path.sep.join([args.output_dir, 'ship-db-details.csv']), 'w') as ship_db:
         csv_writer = csv.DictWriter(ship_db, sorted(enhanced_vessels[0].keys()))
@@ -119,19 +172,4 @@ if __name__ == '__main__':
     formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:%(message)s')
     file_handler.setFormatter(formatter)
     logging.getLogger().addHandler(file_handler)
-
-    parser = argparse.ArgumentParser(description='Importing vessels details from online DB',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter
-                                     )
-
-    parser.add_argument('--input-file', type=str, help='input list of vessels (CSV file)', default='vessels.csv')
-    parser.add_argument('--output-dir', type=str, help='location of output directory', default='.')
-    parser.add_argument('--head', type=int, help='processes only the indicated amount of lines from input file')
-    parser.add_argument('--pool-size', type=int, help='number of parallel tasks', default=1)
-
-    parser.add_argument('output_file', type=str, nargs='?', help='name of the output CSV file', default='vessels-details.csv')
-    args = parser.parse_args()
-
-    set_cache_path(os.path.sep.join([args.output_dir, 'urlcaching-details']))
-
-    main(args)
+    main()

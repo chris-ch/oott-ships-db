@@ -30,3 +30,21 @@ https://www.marinetraffic.com/map/get_data_json/sw_x:-96/sw_y:28/ne_x:-92/ne_y:3
 16677925	-53144039	1322	127	270	636016791	AQUAPROSPER	0
 
 71014
+
+------------------
+Filtering criteria:
+------------------
+
+>>> vessels['Width'][(vessels['Length'] < 400) & (vessels['GT'] > 80000)].describe()
+count    1631.000000
+mean       52.705702
+std         6.743720
+min        12.000000
+25%        48.000000
+50%        50.000000
+75%        60.000000
+max        78.000000
+Name: Width, dtype: float64
+
+>>> vessels['GT'][(vessels['Length'] < 400) & (vessels['GT'] > 80000)].sum() / vessels['GT'].sum()
+0.30458460971009638
