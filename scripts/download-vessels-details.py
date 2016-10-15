@@ -158,7 +158,7 @@ def main():
         for param_name in vessel_data:
             enhanced_vessels[load_id][param_name] = vessel_data[param_name]
 
-    with open(os.path.sep.join([args.output_dir, 'ship-db-details.csv']), 'w') as ship_db:
+    with open(os.path.sep.join([args.output_dir, 'ship-db-details.csv']), 'w', encoding='utf-8') as ship_db:
         csv_writer = csv.DictWriter(ship_db, sorted(enhanced_vessels[0].keys()))
         csv_writer.writeheader()
         csv_writer.writerows(enhanced_vessels)
@@ -172,4 +172,8 @@ if __name__ == '__main__':
     formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:%(message)s')
     file_handler.setFormatter(formatter)
     logging.getLogger().addHandler(file_handler)
-    main()
+    try:
+        main()
+    except:
+        logging.exception('uncaught exception')
+
