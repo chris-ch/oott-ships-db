@@ -3,6 +3,7 @@ import csv
 import logging
 import os
 import re
+from collections import defaultdict
 from string import Template
 
 import pandas
@@ -19,7 +20,7 @@ def load_details(url, load_id):
     html_text = open_url(url, throttle=1)
     html = BeautifulSoup(html_text, 'html.parser')
     ais_data = html.find('div', {'id': 'ais-data'})
-    params = dict()
+    params = defaultdict(lambda:  None)
     if ais_data is None:
         logging.warning('invalid format for page: "%s"', url)
         return load_id, params
@@ -72,6 +73,24 @@ def load_details(url, load_id):
         last_report_ts = last_report_tag.contents[0]
 
     params['last_report_ts'] = last_report_ts
+
+    net_tonnage = params['Net Tonnage']
+    if net_tonnage and net_tonnage.endswith(' t'):
+        net_tonnage = net_tonnage[:-2]
+
+    params['NT'] = net_tonnage
+
+    deadweight = params['Deadweight']
+    if deadweight and deadweight.endswith(' t'):
+        deadweight = deadweight[:-2]
+
+    params['DW'] = deadweight
+
+    del params['Deadweight']
+    del params['Net Tonnage']
+    del params['Gross Tonnage']
+    del params['Crude (bbl)']
+    del params['Size']
     return load_id, params
 
 
@@ -150,7 +169,8 @@ def main():
 
     for load_id, vessel_data in details:
         for param_name in vessel_data:
-            enhanced_vessels[load_id][param_name] = vessel_data[param_name]
+            value = vessel_data[param_name]
+            enhanced_vessels[load_id][param_name] = value
 
     with open(os.path.sep.join([args.output_dir, 'ship-db-details.csv']), 'w', encoding='utf-8') as ship_db:
         csv_writer = csv.DictWriter(ship_db, sorted(enhanced_vessels[0].keys()))
