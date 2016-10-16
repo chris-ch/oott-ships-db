@@ -91,9 +91,9 @@ def inspect(input_filename):
                 continue
 
             gross_tonnage = None
-            if fields['GT'].endswith(' t'):
-                if len(fields['GT'][:-2]) > 0:
-                    gross_tonnage = int(fields['GT'][:-2])
+            field_gt = fields['GT'].strip()
+            if field_gt.endswith(' t'):
+                gross_tonnage = int(field_gt[:-2])
 
             row['GT'] = gross_tonnage
             length_width = re.match(r'([0-9]+)\sx\s([0-9]+)', fields['Size'])
@@ -174,6 +174,6 @@ if __name__ == '__main__':
     logging.getLogger().addHandler(file_handler)
     try:
         main()
-    except:
+    except Exception:
         logging.exception('uncaught exception')
 
