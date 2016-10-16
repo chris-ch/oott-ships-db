@@ -11,13 +11,7 @@ from bs4 import BeautifulSoup
 from webscrapetools.taskpool import TaskPool
 from webscrapetools.urlcaching import set_cache_path, open_url
 
-_VESSEL_TYPES = {
-    'Cargo ships': '4',
-    'Tanker': '6'
-}
-
 _URL_BASE = 'https://www.vesselfinder.com'
-_URL_LIST_TEMPLATE = Template(_URL_BASE + '/vessels?t=$vessel_type&page=$page_count')
 
 
 def load_details(url, load_id):
