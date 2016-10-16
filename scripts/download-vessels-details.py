@@ -109,7 +109,7 @@ def inspect(input_filename):
 
 def build_vessels_df(rows):
     vessels = pandas.DataFrame(rows)
-    vessel_selection = (vessels['Length'] > 200) | (vessels['GT'] > 80000)
+    vessel_selection = (vessels['Length'] > 250) | (vessels['GT'] > 80000)
     vessels_oil = vessels[vessel_selection & vessels['Ship type'].str.contains('Oil')]
     vessels_lng = vessels[vessel_selection & vessels['Ship type'].str.contains('LNG')]
     return vessels_oil, vessels_lng
