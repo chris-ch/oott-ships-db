@@ -122,7 +122,7 @@ def inspect(input_filename, skip_empty_imo=True):
 
 def build_vessels_df(rows):
     vessels = pandas.DataFrame(rows)
-    vessel_selection = (vessels['Length'] > 250) | (vessels['GT'] > 80000)
+    vessel_selection = (vessels['Length'] > 200) | (vessels['GT'] > 60000)
     vessels_oil = vessels[vessel_selection & ~vessels['Ship type'].str.contains('LNG')]
     vessels_lng = vessels[vessel_selection & vessels['Ship type'].str.contains('LNG')]
     return vessels_oil, vessels_lng
@@ -192,6 +192,7 @@ if __name__ == '__main__':
     logging.getLogger().addHandler(file_handler)
     try:
         main()
+
     except Exception:
         logging.exception('uncaught exception')
 
