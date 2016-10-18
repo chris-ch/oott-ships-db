@@ -166,7 +166,29 @@ def main():
     vessels_oil, vessels_lng = build_vessels_df(rows)
     vessels_oil.to_pickle(os.sep.join((args.output_dir, 'vessels_oil.pickle')))
     vessels_lng.to_pickle(os.sep.join((args.output_dir, 'vessels_lng.pickle')))
-    tasks = TaskPool(args.pool_size)
+
+    class TaskPoolPlus(TaskPool):
+
+        def execute2(self):
+            """
+            Starts executing the tasks and wait for their completion.
+            :return:
+            """
+            logging.info('processing %d tasks on a pool size of %d', len(self._tasks_args), self._pool_size)
+            if self._pool_size == 1:
+                for task_args in self._tasks_args:
+                    result = TaskPool._task_function_wrapper(task_args)
+                    yield result
+
+            else:
+                results = self._pool.map(TaskPool._task_function_wrapper, self._tasks_args)
+                for result in results:
+                    yield result
+
+            self._pool.close()
+            self._pool.join()
+
+    tasks = TaskPoolPlus(args.pool_size)
     enhanced_vessels = list()
     for count, vessel_row_data in enumerate(vessels_oil.iterrows()):
         vessel = vessel_row_data[1].to_dict()
@@ -181,7 +203,7 @@ def main():
             tasks.add_task(load_details, url, count)
 
     logging.info('launching tasks processing')
-    details = tasks.execute()
+    details = tasks.execute2()
 
     for load_id, vessel_data in details:
         for param_name in vessel_data:
