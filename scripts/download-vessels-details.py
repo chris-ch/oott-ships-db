@@ -4,7 +4,6 @@ import logging
 import os
 import re
 from collections import defaultdict
-from string import Template
 
 import pandas
 from bs4 import BeautifulSoup
@@ -13,6 +12,18 @@ from webscrapetools.taskpool import TaskPool
 from webscrapetools.urlcaching import set_cache_path, open_url
 
 _URL_BASE = 'https://www.vesselfinder.com'
+
+
+def update_dict(a_dict, key, value):
+    """
+    Working around Beautifulsoup bug when handling strings.
+
+    :param a_dict:
+    :param key:
+    :param value:
+    :return:
+    """
+    a_dict[str(key)] = str(value)
 
 
 def load_details(url, load_id):
@@ -31,7 +42,7 @@ def load_details(url, load_id):
         if column_name_tag and column_value_tag:
             column_name = column_name_tag.text
             column_value = column_value_tag.text.strip()
-            params[column_name] = column_value
+            update_dict(params, column_name, column_value)
 
         else:
             column_name_tag = param.find('span', {'class': 'name'})
@@ -42,7 +53,7 @@ def load_details(url, load_id):
                 if column_value.upper() in ('PREMIUM USERS ONLY', 'N/A'):
                     column_value = ''
 
-                params[column_name] = column_value
+                update_dict(params, column_name, column_value)
 
     master_data = html.find('section', {'id': 'master-data'})
     for param in master_data.find_all('div', {'class': 'row param'}):
@@ -65,7 +76,7 @@ def load_details(url, load_id):
             if column_value.upper() in ('PREMIUM USERS ONLY', 'N/A'):
                 column_value = ''
 
-            params[column_name] = column_value
+            update_dict(params, column_name, column_value)
 
     last_report_ts = None
     last_report_tag = html.find('time', {'id': 'last_report_ts'})
