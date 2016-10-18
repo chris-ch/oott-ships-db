@@ -56,18 +56,19 @@ def load_details(url, load_id):
                 update_dict(params, column_name, column_value)
 
     master_data = html.find('section', {'id': 'master-data'})
+
+    def find_param(param_field):
+        def inner(tag):
+            if tag.name in ('div', 'span'):
+                for attr in tag.attrs:
+                    if param_field in tag[attr]:
+                        return True
+
+            return False
+
+        return inner
+
     for param in master_data.find_all('div', {'class': 'row param'}):
-        def find_param(param_field):
-            def inner(tag):
-                if tag.name in ('div', 'span'):
-                    for attr in tag.attrs:
-                        if param_field in tag[attr]:
-                            return True
-
-                return False
-
-            return inner
-
         column_name_tag = param.find(find_param('name'))
         column_value_tag = param.find(find_param('value'))
         if column_name_tag and column_value_tag:
@@ -83,7 +84,7 @@ def load_details(url, load_id):
     if last_report_tag is not None:
         last_report_ts = last_report_tag.contents[0]
 
-    params['last_report_ts'] = last_report_ts
+    update_dict(params, 'last_report_ts', last_report_ts)
 
     net_tonnage = params['Net Tonnage']
     if net_tonnage and net_tonnage.endswith(' t'):
@@ -177,6 +178,7 @@ def main():
             url = _URL_BASE + ship_details_url_path
             tasks.add_task(load_details, url, count)
 
+    logging.info('launching tasks processing')
     details = tasks.execute()
 
     for load_id, vessel_data in details:
