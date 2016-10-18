@@ -160,7 +160,9 @@ def main():
         os.makedirs(args.output_dir)
 
     input_filename = os.sep.join((args.input_dir, args.input_file))
+    logging.info('inspecting input file')
     rows = inspect(input_filename)
+    logging.info('creating dataframes')
     vessels_oil, vessels_lng = build_vessels_df(rows)
     vessels_oil.to_pickle(os.sep.join((args.output_dir, 'vessels_oil.pickle')))
     vessels_lng.to_pickle(os.sep.join((args.output_dir, 'vessels_lng.pickle')))
