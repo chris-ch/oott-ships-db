@@ -94,17 +94,17 @@ def load_details(url, load_id):
     return load_id, params
 
 
-def inspect(input_filename):
+def inspect(input_filename, skip_empty_imo=True):
     with open(input_filename, 'r', encoding='utf-8') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         rows = list()
         for row in csv_reader:
             fields = {field: row[field].strip() for field in row}
-            if fields['IMO'] == '':
+            if skip_empty_imo and fields['IMO'] == '':
                 continue
 
             gross_tonnage = None
-            field_gt = fields['GT'].strip()
+            field_gt = fields['GT']
             if field_gt.endswith(' t'):
                 gross_tonnage = int(field_gt[:-2])
 
@@ -123,7 +123,7 @@ def inspect(input_filename):
 def build_vessels_df(rows):
     vessels = pandas.DataFrame(rows)
     vessel_selection = (vessels['Length'] > 250) | (vessels['GT'] > 80000)
-    vessels_oil = vessels[vessel_selection & vessels['Ship type'].str.contains('Oil')]
+    vessels_oil = vessels[vessel_selection & ~vessels['Ship type'].str.contains('LNG')]
     vessels_lng = vessels[vessel_selection & vessels['Ship type'].str.contains('LNG')]
     return vessels_oil, vessels_lng
 
@@ -147,12 +147,13 @@ def main():
         logging.info('creating output directory "%s"', os.path.abspath(args.output_dir))
         os.makedirs(args.output_dir)
 
-    tasks = TaskPool(args.pool_size)
-    enhanced_vessels = list()
     input_filename = os.sep.join((args.input_dir, args.input_file))
     rows = inspect(input_filename)
     vessels_oil, vessels_lng = build_vessels_df(rows)
-
+    vessels_oil.to_pickle(os.sep.join((args.output_dir, 'vessels_oil.pickle')))
+    vessels_lng.to_pickle(os.sep.join((args.output_dir, 'vessels_lng.pickle')))
+    tasks = TaskPool(args.pool_size)
+    enhanced_vessels = list()
     for count, vessel_row_data in enumerate(vessels_oil.iterrows()):
         vessel = vessel_row_data[1].to_dict()
         enhanced_vessels.append(vessel)
@@ -170,6 +171,9 @@ def main():
     for load_id, vessel_data in details:
         for param_name in vessel_data:
             value = vessel_data[param_name]
+            if param_name == 'Draught' and value and value.endswith(' t'):
+                value = value[:-2]
+
             enhanced_vessels[load_id][param_name] = value
 
     with open(os.path.sep.join([args.output_dir, 'ship-db-details.csv']), 'w', encoding='utf-8') as ship_db:

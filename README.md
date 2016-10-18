@@ -64,3 +64,6 @@ So your 20,000 DWT tanker can carry anything from about 100,000 Barrels of MFO t
 It will depend on the density of oil, which varies somewhat according to what field it is from. If I take 0.85 kg/L as a typical density, and I assume the deadweight tonnahe is in metric tonnes, 20000 t x 1 m³/0.85 t = 23530 m³
 
 A barrel of oil is 42 US gallons or 0.159 m³, so 147980 barrels approximately. A little more for light crude, a little less for heavy crude.
+
+-------------------
+2 Types: GT < 120, GT >= 120
