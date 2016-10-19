@@ -186,7 +186,7 @@ def main():
     for load_id, vessel_data in details:
         for param_name in vessel_data:
             value = vessel_data[param_name]
-            if param_name == 'Draught' and value and value.endswith(' m'):
+            if param_name in ('Draught', 'Current draught') and value and value.endswith(' m'):
                 value = value[:-2]
 
             enhanced_vessels[load_id][param_name] = value
