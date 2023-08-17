@@ -24,43 +24,56 @@ def load_page(page_current, page_max=None):
     html_text = open_url(url, throttle=1)
     try:
         html = BeautifulSoup(html_text, 'html.parser')
-        ship_rows = html.find_all('div', {'class': 'ship-row-details'})
+        ships = html.find('table', {'class': 'results'})
         page_content = list()
-        for ship_row in ship_rows:
-            ship_header = ship_row.find_next('header')
-            ship_details_url_path = ship_header.find_next('a', {'rel': 'bookmark'})['href']
-            mmsi_lookup = ship_details_url_path.split('-MMSI-')
-            ship_MMSI = ''
-            if len(mmsi_lookup) > 1:
-                ship_MMSI = mmsi_lookup[-1]
+        for ship_row in ships.find('tbody').find_all('tr'):
+            row_data = dict()
+            field1 = ship_row.find('td', {'class': 'v2'})
+            flag = field1.find('div', {'class': 'flag-icon'})
+            if flag:
+                row_data['country'] = flag.get('title').strip()
 
-            ship_country_owner_a_tag = ship_header.find_next('a', {'rel': 'bookmark'})
-            ship_country_owner_img_tag = ship_country_owner_a_tag.find_next('img', {'class': 'ship-flag'})
-            ship_country_owner = ''
-            if ship_country_owner_img_tag:
-                ship_country_owner = ship_country_owner_img_tag['title'][len('Flag of') + 1:]
+            vessel_name = field1.find('div', {'class': 'slna'})
+            if vessel_name:
+                row_data['name'] = vessel_name.text.strip()
 
-            ship_name = ship_header.find_next('a', {'rel': 'bookmark'}).text.strip()
-            row_data = {'ship_name': ship_name, 'ship_country_owner': ship_country_owner,
-                        'ship_details_url_path': ship_details_url_path, 'ship_MMSI': ship_MMSI}
+            vessel_type = field1.find('div', {'class': 'slty'})
+            if vessel_type:
+                row_data['type'] = vessel_type.text.strip()
 
-            for row_param in ship_row.find_all('div', {'class': 'row param'}):
-                param_name = row_param.find_next('div')
-                param_value_raw = param_name.find_next('div')
-                if param_value_raw.text.strip().upper() == 'N/A':
-                    param_value = ''
+            field2 = ship_row.find('td', {'class': 'v3'})
+            field3 = ship_row.find('td', {'class': 'v4'})
+            field4 = ship_row.find('td', {'class': 'v5'})
+            field5 = ship_row.find('td', {'class': 'v6'})
+            if field1:
+                row_data['imo'] = field1.find('a').get('href').split('/')[-1]
 
-                else:
-                    param_value = param_value_raw.text
+            if field2 and field2.text.strip().replace(',', '').isdigit():
+                row_data['year-built'] = int(field2.text.strip().replace(',', ''))
 
-                row_data[param_name.text] = param_value
+            if field3 and field3.text.strip().replace(',', '').isdigit():
+                row_data['gross-tons'] = int(field3.text.strip().replace(',', ''))
+
+            if field4 and field4.text.strip().replace(',', '').isdigit():
+                row_data['dead-weight-tons'] = int(field4.text.strip().replace(',', ''))
+
+            if field5 and '/' in field5.text:
+                length, width = field5.text.split('/')
+                if length.strip().replace(',', '').isdigit():
+                    row_data['length_meters'] = int(length.strip().replace(',', ''))
+                if width.strip().replace(',', '').isdigit():
+                    row_data['width_meters'] = int(width.strip().replace(',', ''))
 
             page_content.append(row_data)
 
-        pagination = html.find('div', {'id': 'vessels-list'}).find('ul', {'class': 'mypagination'})
-        page_last = pagination.find_next('li', {'class': 'last'}).find_next('a')['href'].split('&page=')[-1]
-        logging.info('processed page %s (last: %s, max: %s)', page_current, page_last, page_max)
-        completed = page_current >= int(page_last) or page_current >= (page_max, page_current + 1)[page_max is None]
+        pagination = html.find('div', {'class': 'pagination-controls'}).find('span')
+        completed = True
+        if pagination and '/' in pagination.text:
+            _, total = pagination.text.split('/')
+            if total.strip().replace(',', '').isdigit():
+                page_last = int(total.strip().replace(',', ''))
+                logging.info('processed page %s (last: %s, max: %s)', page_current, page_last, page_max)
+                completed = page_current >= page_last or page_current >= (page_max, page_current + 1)[page_max is None]
 
     except Exception:
         logging.exception('failed to load page %s', page_current)
@@ -90,6 +103,7 @@ def main(args):
         os.makedirs(args.output_dir)
 
     load_pages(args.output_dir, page_max=None, page_start=1)
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(name)s:%(levelname)s:%(message)s')
